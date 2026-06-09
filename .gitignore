@@ -1,0 +1,40 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/
+*.env
+
+# IDE settings
+.vscode/
+.idea/
+
+# PsychoPy output and logs
+*.log
+*.psydat
+*.csv
+*.xlsx
+
+# Generated model output
+output/
+Output/
+results/
+Visual events/
+*.pickle
+*.pkl
+
+# Participant data
+Data/
+eyetracking_data/
+
+# Large media files
+movies/
+*.mp4
+*.avi
+*.mov

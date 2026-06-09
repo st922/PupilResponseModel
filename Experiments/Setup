@@ -1,0 +1,31 @@
+'''
+Created on Tue Jun 09 13:21:14 2026
+
+@author: Kyle Stock
+
+Settings:
+Experiment setup
+'''
+accommodation_time = 1.0    # Final experiment : 15.0
+stimulus_time = 1.0         # Final experiment : 2.5
+stimulus_size = 20          # in [px]
+
+n_blocks = 2                # Final experiment : 5
+grid_rows = 3
+grid_columns = 4
+
+# Monitor Setup
+screen_width = 53           # in [cm]
+viewing_distance = 58       # in [cm]
+screen_res = (1500,960)     # in [px]
+screen_margin = 40          # in [px]
+
+project_dir = Path(__file__).resolve().parent.parent
+
+movie_dir = project_dir / "Data" / "Input" / "Movies"
+output_dir = project_dir / "Data" /"Output"
+
+monitor = monitors.Monitor("my_monitor")
+monitor.setWidth(screen_width)
+monitor.setDistance(viewing_distance)
+monitor.setSizePix(screen_res)
