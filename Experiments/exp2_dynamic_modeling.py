@@ -1,32 +1,43 @@
 import csv
 import numpy as np
-from pathlib import Path
-from psychopy import visual, event, core, monitors
 import random
 
+from pathlib import Path
+import sys
+from psychopy import visual, event, core, monitors
+
+
+project_dir = Path(__file__).resolve().parent.parent
+if str(project_dir) not in sys.path:
+    sys.path.append(str(project_dir))
+from setup import PATHS, Setup
 
 
 # ------------- Configuration -------------
+subject_id = "00"
 
-subject_id = "01"
+accommodation_time=Setup.accommodation_time_s
 
-accommodation_time = 1.0    # Fianl experiment : 15.0
-stimulus_time = 1.0         # Final experiment : 2.5
+stimulus_time=Setup.fixation_time_s
+stimulus_size=Setup.fixation_size_px
 
-grid_rows = 3
-grid_columns = 4
+stimulus_symbol = Setup.fixation_symbol
+stimulus_color = Setup.fixation_color
 
-screen_width = 53           # in [cm]
-viewing_distance = 58       # in [cm]
-screen_res = (1500,960)     # in [px]
-screen_margin = 40          # in [px]
+grid_rows=Setup.grid_rows
+grid_columns=Setup.grid_columns
+
+screen_margin=Setup.screen_margin_px
+movie_margin = Setup.movie_margin_px
+
 
 # ------------- Paths -------------
-project_dir = Path(__file__).resolve().parent.parent
+movie_dir = PATHS["movie_dir"]
+output_dir = PATHS["exp2_output_dir"] / f"subject_{subject_id}"
+calibration_dir = output_dir / "calibration"
+output_dir.mkdir(parents=True, exist_ok=True)
+calibration_dir.mkdir(parents=True,exist_ok=True)
 
-movie_dir = project_dir / "Data" / "Input" / "Movies"
-output_dir = project_dir / "Data" /"Output" / "2_exp"
-output_dir.mkdir(exist_ok=True)
 
 # ------------- Helper functions -------------
 def check_escape() -> None:
@@ -41,7 +52,7 @@ def show_text(text:str) -> None:
         win=window,
         text=text,
         color='white',
-        height=20
+        height=30
     )
 
     stim.draw()
@@ -72,20 +83,21 @@ def save_data(file_path:Path, header:list[str], data:list[list[object]]) -> None
 
 
 # ------------- Monitor and window -------------
-
-monitor = monitors.Monitor("test_monitor")
-monitor.setWidth(screen_width)
-monitor.setDistance(viewing_distance)
-monitor.setSizePix(screen_res)
+monitor = monitors.Monitor(Setup.monitor_name)
+monitor.setWidth(Setup.screen_width_cm)
+monitor.setDistance(Setup.viewing_distance_cm)
+monitor.setSizePix(Setup.screen_resolution_px)
 
 window = visual.Window(
-    size = screen_res,
-    fullscr = True,
-    color='grey',
+    size = Setup.screen_resolution_px,
+    fullscr = Setup.full_screen,
+    color="grey",
     monitor = monitor,
-    units="pix"
+    units= "pix"
 )
 window_width, window_height = window.size
+
+
 
 # ------------- Prepare stimuli -------------
 X = np.linspace(
@@ -101,17 +113,18 @@ Y = np.linspace(
 
 fixation_positions = [(x,y) for x in X for y in Y]
 random.shuffle(fixation_positions)
+#print(list(fixation_positions))
 
-movie_list = get_movies(movie_dir)
+movie_list = get_movies(movie_dir)[:2]
 random.shuffle(movie_list)
-
+#print(movie_list)
 
 fixation = visual.TextStim(
     win=window,
     pos = (0,0),
-    text='+',
-    color='white',
-    height=30
+    text=stimulus_symbol,
+    color=stimulus_color,
+    height=stimulus_size
 )
 
 intro_text = '''
@@ -147,16 +160,17 @@ for pos in fixation_positions:
         window.flip()
         check_escape()
 
-show_text("Pause\n\nPress SPACE to continue.")
+show_text("Calibration complete\n\nPress SPACE to continue to movies.")
 
 
-# Movie presentation
+
+# ------------- Movie presentation -------------
 for idx,movie_path in enumerate(movie_list):
     print(movie_path.name)
     movie = visual.MovieStim(
         win=window,
         filename=str(movie_path),
-        size=(window_width-2*screen_margin,window_height-2*screen_margin),
+        size=(window_width-2*movie_margin,window_height-2*movie_margin),
         pos=(0, 0),
         loop=False,
         volume = 0.0,
@@ -187,15 +201,15 @@ for idx,movie_path in enumerate(movie_list):
 
 # ------------- Save data -------------
 save_data(
-    output_dir / f"{subject_id}_positions.csv",
+    output_dir /"calibration"/ f"fixation_positions.csv",
     ["x_pix", "y_pix"],
     [[x, y] for x, y in fixation_positions],
 )
 
 save_data(
-    output_dir / f"{subject_id}_movies.csv",
+    output_dir / f"movie_order.csv",
     ["movie_order"],
-    [[movie.name] for movie in movie_list],
+    [[movie_path.stem] for movie_path in movie_list],
 )
 
 # Exit screen

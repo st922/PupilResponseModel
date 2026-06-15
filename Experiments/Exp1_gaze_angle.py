@@ -12,34 +12,39 @@ import numpy as np
 import random
 import csv
 from pathlib import Path
+import sys
 
-# ------------- Configuration -------------
+project_dir = Path(__file__).resolve().parent.parent
+if str(project_dir) not in sys.path:
+    sys.path.append(str(project_dir))
+from setup import PATHS, Setup
 
 subject_id = "01"
 
-accommodation_time = 1.0    # Final experiment : 15.0
-stimulus_time = 1.0         # Final experiment : 2.5
-stimulus_size = 20          # in [px]
+# ----------- Import Setup --------------
+accommodation_time=Setup.accommodation_time_s
 
-n_blocks = 2                # Final experiment : 5
-grid_rows = 3
-grid_columns = 4
+stimulus_time=Setup.fixation_time_s
+stimulus_size=Setup.fixation_size_px
+stimulus_symbol = Setup.fixation_symbol
+stimulus_color = Setup.fixation_color
 
-screen_width = 53           # in [cm]
-viewing_distance = 58       # in [cm]
-screen_res = (1500,960)     # in [pixel]
-screen_margin = 40
+n_blocks = Setup.n_blocks
+grid_rows=Setup.grid_rows
+grid_columns=Setup.grid_columns
+
+screen_margin=Setup.screen_margin_px
+
 
 # ------------- Paths -------------
-project_dir = Path(__file__).resolve().parent.parent
-output_dir = project_dir / "Data" /"Output" / "1_exp"
-output_dir.mkdir(exist_ok=True)
+output_dir = PATHS["exp1_output_dir"] / f"subject_{subject_id}"
+output_dir.mkdir(parents=True, exist_ok=True)
 
 
 # ------------- Helper functions -------------
 def check_escape() -> None:
     """ Stops experiment when ESCAPE is pressed. """
-    if 'escape' in event.getKeys():
+    if 'escape' in event.getKeys(keyList=["escape"]):
         window.close()
         core.quit()
 
@@ -49,7 +54,7 @@ def show_text(text:str) -> None:
         win=window,
         text=text,
         color='white',
-        height=stimulus_size
+        height=30
     )
 
     stim.draw()
@@ -63,22 +68,21 @@ def show_text(text:str) -> None:
         core.quit()
 
 
-# ------------- Monitor and window -------------
-monitor = monitors.Monitor("test_monitor")
-monitor.setWidth(screen_width)
-monitor.setDistance(viewing_distance)
-monitor.setSizePix(screen_res)
+# ------------- Prepare stimuli -------------
+monitor = monitors.Monitor(Setup.monitor_name)
+monitor.setWidth(Setup.screen_width_cm)
+monitor.setDistance(Setup.viewing_distance_cm)
+monitor.setSizePix(Setup.screen_resolution_px)
 
 window = visual.Window(
-    size = screen_res,
-    fullscr = True,
-    color='grey',
+    size = Setup.screen_resolution_px,
+    fullscr = Setup.full_screen,
+    color="grey",
     monitor = monitor,
-    units="pix"
+    units= "pix"
 )
-window_width, window_height = window.size
 
-# ------------- Prepare stimuli -------------
+window_width, window_height = window.size
 
 X = np.linspace(
     -(window_width/2 -screen_margin),
@@ -91,13 +95,13 @@ Y = np.linspace(
     grid_rows
 )
 positions = [(x,y) for x in X for y in Y]
-log_pos = []
+fixation_log = []
 
 fixation = visual.TextStim(
     win=window,
-    text='+',
-    color='white',
-    height=30
+    text=stimulus_symbol,
+    color=stimulus_color,
+    height=stimulus_size
 )
 
 
@@ -118,21 +122,24 @@ clock = core.Clock()
 
 
 
-for block in range(n_blocks):
+for block_idx in range(n_blocks):
     trial_pos = positions.copy()
     random.shuffle(trial_pos)
 
     # Accommodation Phase
     fixation.pos = (0,0)
     clock.reset()
+
     while clock.getTime() < accommodation_time:
         fixation.draw()
         window.flip()
         check_escape()
 
     # Trial Loop
-    for pos in trial_pos:
+    for trial_idx, pos in enumerate(trial_pos):
         fixation.pos = pos
+
+        onset_time = round(core.getTime(),2)
         clock.reset()
 
         while clock.getTime() < stimulus_time:
@@ -140,19 +147,28 @@ for block in range(n_blocks):
             window.flip()
             check_escape()
 
+        fixation_log.append([
+            subject_id,
+            block_idx +1,
+            trial_idx +1,
+            float(pos[0]),
+            float(pos[1]),
+            onset_time,
+            stimulus_time
+        ])
 
     # Break
-    if block < (n_blocks-1):
+    if block_idx < (n_blocks-1):
         show_text("Pause\n\nPress SPACE to continue.")
-    log_pos.append(trial_pos)
 
 
 
-# Also log the positions of the fixation points.
-file_path = output_dir / f"{subject_id}_positions.csv"
+
+# Log the positions of the fixation points.
+file_path = output_dir / f"fixation_positions.csv"
 with file_path.open('w', newline='', encoding= "utf-8") as file:
     writer = csv.writer(file)
-    writer.writerow(log_pos)
+    writer.writerows(fixation_log)
 
 # Add exit screen
 show_text("Thank you for participating.\n\nPress SPACE to exit.")
